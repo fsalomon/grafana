@@ -2887,6 +2887,21 @@
     },
     {
       "metadata": {
+        "name": "grafana.panelEditNextFeedbackEvent",
+        "resourceVersion": "1779460967947",
+        "creationTimestamp": "2026-05-22T14:42:47Z"
+      },
+      "spec": {
+        "description": "Replaces the Intercom survey for PanelEditNext feedback with an event that triggers an in-house survey",
+        "stage": "experimental",
+        "codeowner": "@grafana/datapro",
+        "frontend": true,
+        "hideFromDocs": true,
+        "expression": "false"
+      }
+    },
+    {
+      "metadata": {
         "name": "grafana.scenesFlickeringFix",
         "resourceVersion": "1778059584976",
         "creationTimestamp": "2026-05-06T09:26:24Z"
