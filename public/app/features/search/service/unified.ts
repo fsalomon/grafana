@@ -22,8 +22,6 @@ import { contextSrv } from 'app/core/services/context_srv';
 import kbn from 'app/core/utils/kbn';
 import { dispatch } from 'app/store/store';
 
-import { isRootFolderUID } from '../constants';
-
 import { deletedDashboardsCache } from './deletedDashboardsCache';
 import {
   type DashboardQueryResult,
@@ -267,12 +265,7 @@ export class UnifiedSearcher implements GrafanaSearcher {
 
     const locationInfo = await this.locationInfo;
     const hits = rsp.hits.map((hit) => {
-      // The apistore stamps "general" on root-parented resources, but the
-      // legacy empty annotation may still be present. "general" doesn't live
-      // in locationInfo as a real folder — the dashboard isn't inaccessible,
-      // it's at the root. Collapse the root sentinels to "general" so it
-      // renders under the synthetic root.
-      if (isRootFolderUID(hit.folder)) {
+      if (hit.folder === undefined) {
         return { ...hit, folder: 'general' };
       }
 
@@ -291,13 +284,7 @@ export class UnifiedSearcher implements GrafanaSearcher {
   async isFolderCacheStale(hits: SearchHit[]): Promise<boolean> {
     const locationInfo = await this.locationInfo;
     return hits.some((hit) => {
-      // Root sentinels (e.g. apistore-stamped "root") are never in
-      // locationInfo because the root folder is synthetic. Treat them as
-      // present so we don't pointlessly reload + remap to "Shared with me".
-      if (isRootFolderUID(hit.folder)) {
-        return false;
-      }
-      return locationInfo[hit.folder] === undefined;
+      return hit.folder !== undefined && locationInfo[hit.folder] === undefined;
     });
   }
 
@@ -416,12 +403,10 @@ export function toDashboardResults(rsp: SearchAPIResponse, sort: string): DataFr
     return { fields: [], length: 0 };
   }
   const dashboardHits = hits.map((hit) => {
-    // Collapse the apistore root sentinel ("root") and any empty value into
-    // the legacy "general" the rest of the search UI expects as the parent
-    // for root-parented dashboards.
-    const isRoot = hit.resource === 'dashboards' && (isEmpty(hit.folder) || isRootFolderUID(hit.folder));
-    const location = isRoot ? 'general' : hit.folder;
-    const folder = isRoot ? 'general' : hit.folder || 'general';
+    let location = hit.folder;
+    if (hit.resource === 'dashboards' && isEmpty(location)) {
+      location = 'general';
+    }
 
     // display null field values as "-"
     const field = Object.fromEntries(
@@ -435,7 +420,7 @@ export function toDashboardResults(rsp: SearchAPIResponse, sort: string): DataFr
       // Sort tags so we aren't reliant on the backend having done this for us
       // Sorting order can be different between APIs/search implementations
       tags: (hit.tags || []).sort(),
-      folder,
+      folder: hit.folder || 'general',
       location,
       name: hit.title, // 🤯 FIXME hit.name is k8s name, eg grafana dashboards UID
       kind: hit.resource.substring(0, hit.resource.length - 1), // dashboard "kind" is not plural

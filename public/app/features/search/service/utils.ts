@@ -6,7 +6,6 @@ import { getDashboardSrv } from 'app/features/dashboard/services/DashboardSrv';
 import { type DashboardDataDTO } from 'app/types/dashboard';
 
 import { AnnoKeyFolder, AnnoKeyUpdatedBy, type ManagerKind, type ResourceList } from '../../apiserver/types';
-import { isRootFolderUID } from '../constants';
 import {
   type DashboardSearchHit,
   DashboardSearchItemType,
@@ -181,20 +180,18 @@ export function resourceToSearchResult(
       field.deletedBy = deletedByDisplayMap?.get(deletedByUid) ?? DELETED_BY_UNKNOWN;
     }
 
-    // Collapse the legacy empty value (and any apistore-stamped sentinel) into
-    // the "general" UID that the rest of the search UI uses for the synthetic
-    // root.
-    const folderAnno = item?.metadata?.annotations?.[AnnoKeyFolder] ?? '';
-    const folder = isRootFolderUID(folderAnno) ? 'general' : folderAnno;
-    const hit: SearchHit = {
+    const hit = {
       resource: 'dashboards',
       name: item.metadata.name,
       title: item.spec?.title,
-      folder,
+      folder: item?.metadata?.annotations?.[AnnoKeyFolder] ?? 'general',
       tags: item.spec?.tags || [],
       field,
       url: '',
     };
+    if (!hit.folder) {
+      return { ...hit, folder: 'general' };
+    }
 
     return hit;
   });
@@ -212,7 +209,7 @@ export function searchHitsToDashboardSearchHits(searchHits: SearchHit[]): Dashbo
       sortMeta: 0, // Default value for deleted items
     };
 
-    if (!isRootFolderUID(hit.folder)) {
+    if (hit.folder && hit.folder !== 'general') {
       dashboardHit.folderUid = hit.folder;
     }
 

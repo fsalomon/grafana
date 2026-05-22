@@ -293,6 +293,10 @@ func TestPrepareObjectForStorage(t *testing.T) {
 		dash := &dashv1.Dashboard{
 			ObjectMeta: v1.ObjectMeta{
 				Name: "test",
+				Annotations: map[string]string{
+					utils.AnnoKeyFolder: "abc",
+				},
+				UID: "xxx",
 			},
 			Spec: dashv1.DashboardSpec{
 				Object: map[string]interface{}{
@@ -318,7 +322,7 @@ func TestPrepareObjectForStorage(t *testing.T) {
 		t.Run("increment when the folder changes", func(t *testing.T) {
 			b := dash.DeepCopy()
 			b.Annotations = map[string]string{
-				utils.AnnoKeyFolder: "abc",
+				utils.AnnoKeyFolder: "xyz",
 			}
 			out = getPreparedObject(t, ctx, s, b, dash)
 			require.Equal(t, int64(2), out.GetGeneration())
@@ -334,9 +338,7 @@ func TestPrepareObjectForStorage(t *testing.T) {
 
 		t.Run("keep when status, labels, or annotations change", func(t *testing.T) {
 			b := dash.DeepCopy()
-			b.Annotations = map[string]string{
-				"x": "hello",
-			}
+			b.Annotations["x"] = "hello"
 			b.Labels = map[string]string{
 				"a": "b",
 			}

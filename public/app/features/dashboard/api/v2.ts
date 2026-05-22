@@ -20,7 +20,6 @@ import { convertSpecToWireFormat } from 'app/features/dashboard-scene/serializat
 import { getDashboardUrl } from 'app/features/dashboard-scene/utils/getDashboardUrl';
 import { type DeleteDashboardResponse } from 'app/features/manage-dashboards/types';
 import { buildSourceLink, removeExistingSourceLinks } from 'app/features/provisioning/utils/sourceLink';
-import { isRootFolderUID } from 'app/features/search/constants';
 import { type DashboardDTO, type SaveDashboardResponseDTO } from 'app/types/dashboard';
 
 import { type SaveDashboardCommand } from '../components/SaveDashboard/types';
@@ -63,14 +62,10 @@ export class K8sDashboardV2API
         throw new DashboardVersionError(dashboard.status.conversion.storedVersion, dashboard.status.conversion.error);
       }
 
-      // load folder info if available. The apistore stamps a root sentinel
-      // ("root", historically "general") on root-parented dashboards; there
-      // is no folder resource to fetch in that case, so collapse it to ""
-      // for the NestedFolderPicker (matches the empty-annotation branch).
-      const folderAnnotation = dashboard.metadata.annotations?.[AnnoKeyFolder];
-      if (dashboard.metadata.annotations && folderAnnotation && !isRootFolderUID(folderAnnotation)) {
+      // load folder info if available
+      if (dashboard.metadata.annotations && dashboard.metadata.annotations[AnnoKeyFolder]) {
         try {
-          const folder = await getFolderByUidFacade(folderAnnotation);
+          const folder = await getFolderByUidFacade(dashboard.metadata.annotations[AnnoKeyFolder]);
           dashboard.metadata.annotations[AnnoKeyFolderTitle] = folder.title;
           dashboard.metadata.annotations[AnnoKeyFolderUrl] = folder.url;
         } catch (e) {
@@ -79,10 +74,10 @@ export class K8sDashboardV2API
             throw new Error('Failed to load folder');
           }
         }
-      } else if (dashboard.metadata.annotations) {
+      } else if (dashboard.metadata.annotations && !dashboard.metadata.annotations[AnnoKeyFolder]) {
         // Set AnnoKeyFolder to empty string for top-level dashboards
         // This ensures NestedFolderPicker correctly identifies it as being in the "Dashboard" root folder
-        // AnnoKeyFolder undefined / root sentinel -> top-level dashboard -> empty string
+        // AnnoKeyFolder undefined -> top-level dashboard -> empty string
         dashboard.metadata.annotations[AnnoKeyFolder] = '';
       }
 
