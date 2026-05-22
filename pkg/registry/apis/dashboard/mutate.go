@@ -202,6 +202,10 @@ func mutateVariable(a admission.Attributes) error {
 	}
 	variable.SetLabels(labels)
 
+	if a.GetOperation() == admission.Create && variable.GetName() == "" {
+		variable.SetName(deriveVariableMetadataName(getVariableName(variable.Spec), meta.GetFolder()))
+	}
+
 	return nil
 }
 
