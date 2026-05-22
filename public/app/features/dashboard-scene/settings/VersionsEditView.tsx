@@ -111,10 +111,12 @@ export class VersionsEditView extends SceneObjectBase<VersionsEditViewState> imp
 
     const options = append ? { limit: this._limit, continueToken: this._continueToken } : { limit: this._limit };
 
-    const loader: Promise<ResourceList<unknown>> =
-      isDashboardTemplate && dashboardTemplateUid
-        ? getDashboardTemplateExtension().listHistory(dashboardTemplateUid, options)
-        : getDashboardAPI().then((api) => api.listDashboardHistory(uid!, options));
+    let loader: Promise<ResourceList<unknown>>;
+    if (isDashboardTemplate && dashboardTemplateUid) {
+      loader = getDashboardTemplateExtension().listHistory(dashboardTemplateUid, options);
+    } else {
+      loader = getDashboardAPI().then((api) => api.listDashboardHistory(uid!, options));
+    }
 
     loader
       .then((result) => {
@@ -150,6 +152,7 @@ export class VersionsEditView extends SceneObjectBase<VersionsEditViewState> imp
           new Date().toISOString(),
         createdBy: item.metadata.annotations?.[AnnoKeyUpdatedBy] ?? item.metadata.annotations?.[AnnoKeyCreatedBy] ?? '',
         message: item.metadata.annotations?.[AnnoKeyMessage] ?? '',
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         data,
       };
     });
